@@ -111,7 +111,10 @@ test('purchase with login', async ({ page }) => {
   await page.getByPlaceholder('Password').fill('c');
   await page.getByRole('button', { name: 'Register' }).click();});
 
-test('order appears in user account', async ({ page }) => {await page.goto('/');
+test('order appears in user account', async ({ page }) => {
+
+    
+await page.goto('/');
 await page.getByRole('button', { name: 'Order now' }).click();
 await page.getByRole('link', { name: 'Image Description asbvjjyczf' }).click();
 await page.getByRole('link', { name: 'Image Description bzyb1i27xd' }).click();

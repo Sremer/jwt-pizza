@@ -99,17 +99,23 @@ test('purchase with login', async ({ page }) => {
     await expect(page.getByText('0.008')).toBeVisible();
   });
 
-  test('register', async ({ page }) => {await page.goto('/');
-  await page.getByRole('link', { name: 'Register' }).click();
-  await expect(page.getByRole('heading')).toContainText('Welcome to the party');
-  await expect(page.getByRole('button', { name: 'Register' })).toBeVisible();
-  await page.getByPlaceholder('Full name').click();
+  test('register', async ({ page }) => {
+    await page.route('*/**/api/auth', async (route) => {
+        const regReq = { email: 'c@jwt.com', password: 'c' };
+        const regRes = { user: { id: 3, name: 'Kai Chen', email: 'e@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
+        expect(route.request().method()).toBe('POST');
+        expect(route.request().postDataJSON()).toMatchObject(regReq);
+        await route.fulfill({ json: regRes });
+      });
+    
+  await page.goto('/'); await page.getByRole('link', { name: 'Register' }).click();
   await page.getByPlaceholder('Full name').fill('c');
   await page.getByPlaceholder('Full name').press('Tab');
-  await page.getByPlaceholder('Email address').fill('c@gmail.com');
+  await page.getByPlaceholder('Email address').fill('c@jwt.com');
   await page.getByPlaceholder('Email address').press('Tab');
   await page.getByPlaceholder('Password').fill('c');
-  await page.getByRole('button', { name: 'Register' }).click();});
+  await page.getByRole('button', { name: 'Register' }).click();
+  await expect(page.locator('#navbar-dark')).toContainText('Logout');});
 
 test('order appears in user account', async ({ page }) => {
 

@@ -51,7 +51,6 @@ jobs:
         uses: actions/deploy-pages@v4
       - name: Run tests
         run: |
-          npm install
           npx playwright install --with-deps chromium
           npm run test:coverage
       - name: Update coverage

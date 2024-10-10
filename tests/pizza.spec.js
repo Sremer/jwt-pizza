@@ -67,6 +67,36 @@ test('purchase with login', async ({ page }) => {
       expect(route.request().postDataJSON()).toMatchObject(orderReq);
       await route.fulfill({ json: orderRes });
     });
+
+    await page.route('*/**/api/order/verify', async (route) => {
+        const orderRes = {
+            "message": "valid",
+            "payload": {
+              "vendor": {
+                "id": "seremer",
+                "name": "Seth Remer"
+              },
+              "diner": {
+                "id": 266,
+                "name": "d",
+                "email": "d@gmail.com"
+              },
+              "order": {
+                "items": [
+                  {
+                    "menuId": 2,
+                    "description": "bzyb1i27xd",
+                    "price": 1
+                  }
+                ],
+                "storeId": "7",
+                "franchiseId": 15,
+                "id": 23
+              }
+            }
+          }
+          await route.fulfill({ json: orderRes });
+    });
   
     await page.goto('/');
   
@@ -97,6 +127,8 @@ test('purchase with login', async ({ page }) => {
   
     // Check balance
     await expect(page.getByText('0.008')).toBeVisible();
+    await page.getByRole('button', { name: 'Verify' }).click();
+
   });
 
   test('register', async ({ page }) => {
@@ -285,3 +317,18 @@ await expect(page.locator('tbody')).toContainText('0 ₿');
 await page.getByRole('button', { name: 'Close' }).click();
 await expect(page.getByRole('heading')).toContainText('Sorry to see you go');
 await page.getByRole('button', { name: 'Close' }).click();});
+
+test('user logs out', async ({ page }) => {
+    await page.route('*/**/api/auth', async (route) => {
+        const loginReq = { email: 'c@jwt.com', password: 'c' };
+        const loginRes = { user: { id: 3, name: 'Kai Chen', email: 'c@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
+        await route.fulfill({ json: loginRes });
+      });
+    
+    await page.goto('/'); await page.getByRole('link', { name: 'Login' }).click();
+await page.getByPlaceholder('Email address').fill('c@jwt.com');
+await page.getByPlaceholder('Email address').press('Tab');
+await page.getByPlaceholder('Password').fill('c');
+await page.getByRole('button', { name: 'Login' }).click();
+await page.getByRole('link', { name: 'Logout' }).click();});
+

@@ -16,6 +16,24 @@ test('purchase with login', async ({ page }) => {
       await route.fulfill({ json: menuRes });
     });
   
+    await page.route('*/**/api/franchise', async (route) => {
+      const franchiseRes = [
+        {
+          id: 2,
+          name: 'LotaPizza',
+          stores: [
+            { id: 4, name: 'Lehi' },
+            { id: 5, name: 'Springville' },
+            { id: 6, name: 'American Fork' },
+          ],
+        },
+        { id: 3, name: 'PizzaCorp', stores: [{ id: 7, name: 'Spanish Fork' }] },
+        { id: 4, name: 'topSpot', stores: [] },
+      ];
+      expect(route.request().method()).toBe('GET');
+      await route.fulfill({ json: franchiseRes });
+    });
+  
     await page.route('*/**/api/auth', async (route) => {
       const loginReq = { email: 'd@jwt.com', password: 'a' };
       const loginRes = { user: { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
@@ -31,7 +49,7 @@ test('purchase with login', async ({ page }) => {
           { menuId: 2, description: 'Pepperoni', price: 0.0042 },
         ],
         storeId: '4',
-        franchiseId: 12,
+        franchiseId: 2,
       };
       const orderRes = {
         order: {
@@ -40,7 +58,7 @@ test('purchase with login', async ({ page }) => {
             { menuId: 2, description: 'Pepperoni', price: 0.0042 },
           ],
           storeId: '4',
-          franchiseId: 12,
+          franchiseId: 2,
           id: 23,
         },
         jwt: 'eyJpYXQ',

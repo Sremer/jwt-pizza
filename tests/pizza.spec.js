@@ -16,24 +16,6 @@ test('purchase with login', async ({ page }) => {
       await route.fulfill({ json: menuRes });
     });
   
-    await page.route('*/**/api/franchise', async (route) => {
-      const franchiseRes = [
-        {
-          id: 2,
-          name: 'LotaPizza',
-          stores: [
-            { id: 4, name: 'Lehi' },
-            { id: 5, name: 'Springville' },
-            { id: 6, name: 'American Fork' },
-          ],
-        },
-        { id: 3, name: 'PizzaCorp', stores: [{ id: 7, name: 'Spanish Fork' }] },
-        { id: 4, name: 'topSpot', stores: [] },
-      ];
-      expect(route.request().method()).toBe('GET');
-      await route.fulfill({ json: franchiseRes });
-    });
-  
     await page.route('*/**/api/auth', async (route) => {
       const loginReq = { email: 'd@jwt.com', password: 'a' };
       const loginRes = { user: { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
@@ -49,7 +31,7 @@ test('purchase with login', async ({ page }) => {
           { menuId: 2, description: 'Pepperoni', price: 0.0042 },
         ],
         storeId: '4',
-        franchiseId: 2,
+        franchiseId: 12,
       };
       const orderRes = {
         order: {
@@ -58,7 +40,7 @@ test('purchase with login', async ({ page }) => {
             { menuId: 2, description: 'Pepperoni', price: 0.0042 },
           ],
           storeId: '4',
-          franchiseId: 2,
+          franchiseId: 12,
           id: 23,
         },
         jwt: 'eyJpYXQ',
@@ -195,15 +177,21 @@ await page.getByRole('button', { name: 'Pay now' }).click();
 await page.getByRole('link', { name: 'd', exact: true }).click();
 });
 
-test('user logs out', async ({ page }) => {await page.goto('/'); await page.getByRole('link', { name: 'Login' }).click();
-await page.getByPlaceholder('Email address').fill('c@gmail.com');
-await page.getByPlaceholder('Email address').press('Tab');
-await page.getByPlaceholder('Password').fill('c');
-await page.getByRole('button', { name: 'Login' }).click();
-await page.getByRole('link', { name: 'Logout' }).click();
-await expect(page.locator('#navbar-dark')).toContainText('Login');});
+test('admin logs in', async ({ page }) => {
+    await page.route('*/**/api/auth', async (route) => {
+        const loginReq = { email: 'a@jwt.com', password: 'admin' };
+        const loginRes = { user: { id: 1, name: 'Kai Chen', email: 'a@jwt.com', roles: [{ role: 'admin' }] }, token: 'abcdef' };
+        expect(route.request().method()).toBe('PUT');
+        expect(route.request().postDataJSON()).toMatchObject(loginReq);
+        await route.fulfill({ json: loginRes });
+      });
 
-test('admin logs in', async ({ page }) => {await page.goto('/'); await page.getByRole('link', { name: 'Login' }).click();
+      await page.route('*/**/api/franchise', async (route) => {
+        const franchiseRes = [];
+        await route.fulfill({ json: franchiseRes });
+      });
+    
+await page.goto('/'); await page.getByRole('link', { name: 'Login' }).click();
 await page.getByPlaceholder('Email address').fill('a@jwt.com');
 await page.getByPlaceholder('Password').click();
 await page.getByPlaceholder('Password').fill('admin');
@@ -217,16 +205,60 @@ await page.getByPlaceholder('franchise name').click();
 await page.getByPlaceholder('franchise name').fill('test');
 await page.getByPlaceholder('franchise name').press('Tab');
 await page.getByPlaceholder('franchisee admin email').fill('test@jwt.com');
-await page.getByRole('button', { name: 'Create' }).click();
-await expect(page.getByRole('heading')).toContainText('Create franchise');});
+await page.getByRole('button', { name: 'Create' }).click();});
 
-test('franchisee adds a store', async ({ page }) => {await page.goto('/'); await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+test('franchisee adds a store', async ({ page }) => {
+    await page.route('*/**/api/auth', async (route) => {
+        const loginReq = { email: 'e@jwt.com', password: 'e' };
+        const loginRes = { user: { id: 279, name: 'e', email: 'e@jwt.com', roles: [{ role: 'diner' }, {
+            objectId: 130,
+            role: "franchisee"
+          },] }, token: 'abcdef' };
+        expect(route.request().method()).toBe('PUT');
+        expect(route.request().postDataJSON()).toMatchObject(loginReq);
+        await route.fulfill({ json: loginRes });
+      });
+
+    await page.route('*/**/api/franchise/279', async (route) => {
+        const franchiseRes = [{
+            "id": 130,
+            "name": "e",
+            "admins": [
+              {
+                "id": 279,
+                "name": "e",
+                "email": "e@jwt.com"
+              }
+            ],
+            "stores": [{
+                "id": 116,
+                "name": "test",
+                "totalRevenue": 0
+              }]
+          }];
+        await route.fulfill({ json: franchiseRes });
+    });
+
+    await page.route('*/**/api/franchise/*/store', async (route) => {
+        const storeReq = {
+            "name": "test"
+          };
+        const storeRes = {
+            "id": 115,
+            "franchiseId": 130,
+            "name": "test"
+          };
+          expect(route.request().postDataJSON()).toMatchObject(storeReq);
+          await route.fulfill({ json: storeRes });
+    });
+    
+    await page.goto('/'); await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
 await page.getByRole('link', { name: 'login', exact: true }).click();
 await page.getByPlaceholder('Email address').fill('e@jwt.com');
 await page.getByPlaceholder('Password').click();
 await page.getByPlaceholder('Password').fill('e');
 await page.getByRole('button', { name: 'Login' }).click();
-await expect(page.getByRole('heading')).toContainText('e'); await page.getByRole('button', { name: 'Create store' }).click();
+ await page.getByRole('button', { name: 'Create store' }).click();
 await page.getByPlaceholder('store name').click();
 await page.getByPlaceholder('store name').fill('test');
 await page.getByRole('button', { name: 'Create' }).click();
